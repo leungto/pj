@@ -10,6 +10,7 @@ from database import crud
 from database.schemas import RoomCreate, RoomUpdate, RoomResponse
 from auth.dependencies import get_current_user_id
 from mock_data.data import MOCK_ROOMS, MOCK_LOCATIONS
+import database.models as models   
 
 router = APIRouter()
 
@@ -20,7 +21,16 @@ def create_room(room: RoomCreate, db: Session = Depends(get_db)):
     """
     return crud.create_room(db=db, name=room.name, location=room.location, capacity=room.capacity)
 
-
+def structure_room_data(room):
+    return {
+        "id": str(room.id),
+        "name": room.name,
+        "location": room.location,
+        "capacity": room.capacity,
+        "is_active": room.is_active,
+        "createdAt": room.created_at.isoformat(),
+        "updatedAt": room.updated_at.isoformat()
+    }
 @router.get("/", response_model=List[dict])
 def get_all_rooms(
     skip: int = 0,
@@ -30,7 +40,13 @@ def get_all_rooms(
     """
     获取所有房间
     """
-    return MOCK_ROOMS
+    rooms = db.query(models.Room).all()
+    if not rooms:
+        raise HTTPException(status_code=404, detail="没有房间信息")
+    # 这里可以根据需要进行数据处理
+    room_list = [structure_room_data(room) for room in rooms]
+
+    return room_list
 
 
 @router.get("/{room_id}", response_model=dict)
@@ -41,10 +57,10 @@ def get_room(
     """
     获取特定房间信息
     """
-    room = next((r for r in MOCK_ROOMS if r["id"] == room_id), None)
+    room = db.query(models.Room).filter(models.Room.id == room_id).first()
     if not room:
         raise HTTPException(status_code=404, detail="房间不存在")
-    return room
+    return structure_room_data(room)
 
 
 @router.put("/{room_id}", response_model=RoomResponse)
@@ -77,4 +93,11 @@ def get_all_locations(
     """
     获取所有位置
     """
-    return MOCK_LOCATIONS 
+    locations = (
+        db.query(models.Room.location)
+        .distinct()
+        .order_by(models.Room.location)
+        .all()
+    )
+    # 生成自增 id（从 1 开始）
+    return [{"id": idx+1, "name": loc[0]} for idx, loc in enumerate(locations)]

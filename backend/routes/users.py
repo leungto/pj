@@ -10,6 +10,9 @@ from pydantic import BaseModel, EmailStr
 from database.connection import get_db
 from auth.dependencies import get_current_user_id
 from mock_data.data import MOCK_USERS_LIST
+from database.connection import get_db
+import database.models as models   
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 
@@ -33,6 +36,19 @@ class UserStatusUpdateRequest(BaseModel):
 class UserRoleUpdateRequest(BaseModel):
     role: str  # "user" | "admin"
 
+def structure_user_data(user):
+    return {
+        "id": str(user.id),
+        "name": user.name,
+        "email": user.email,
+        "role": user.role,
+        "status": "active" if user.is_active == 1 else "inactive",
+        "is_active": user.is_active,
+        "is_admin": user.is_admin,
+        "hashed_password" : user.hashed_password,
+        "createdAt": user.created_at.isoformat(),
+        "updatedAt": user.updated_at.isoformat()
+    }
 
 @router.get("/", response_model=List[dict])
 async def get_all_users(
@@ -42,31 +58,33 @@ async def get_all_users(
     current_user_id: int = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):
-    """
-    获取所有用户（管理员权限）
-    """
-    # 在实际应用中，检查当前用户是否为管理员
-    # 在模拟环境中，我们直接返回用户列表
-    
-    # 过滤用户
-    filtered_users = MOCK_USERS_LIST
+    # 从数据库获取所有用户（ORM 对象）
+    users = db.query(models.User).all()
+    # print(users[0].__dict__)
+    # 转换为字典列表
+    # print(type(users[0].is_active))
+    print(users[0].is_active)
+    user_list = [
+        structure_user_data(user)
+        for user in users
+    ]
     
     # 按角色过滤
     if role:
-        filtered_users = [u for u in filtered_users if u["role"] == role]
+        user_list = [u for u in user_list if u["role"] == role]
     
     # 按状态过滤
     if status:
-        filtered_users = [u for u in filtered_users if u["status"] == status]
+        user_list = [u for u in user_list if u["status"] == status]
     
     # 搜索用户名或邮箱
     if q:
-        filtered_users = [
-            u for u in filtered_users 
+        user_list = [
+            u for u in user_list 
             if q.lower() in u["name"].lower() or q.lower() in u["email"].lower()
         ]
     
-    return filtered_users
+    return user_list
 
 
 @router.get("/{user_id}", response_model=dict)
@@ -81,12 +99,11 @@ async def get_user(
     """
     # 在实际应用中，检查当前用户是否有权限查看此用户
     # 在模拟环境中，我们直接返回用户信息
-    
-    user = next((u for u in MOCK_USERS_LIST if u["id"] == user_id), None)
+    user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
     
-    return user
+    return structure_user_data(user)
 
 
 @router.put("/{user_id}", response_model=dict)
@@ -102,20 +119,20 @@ async def update_user(
     """
     # 在实际应用中，检查当前用户是否有权限更新此用户
     # 在模拟环境中，我们直接更新并返回用户信息
-    
-    user = next((u for u in MOCK_USERS_LIST if u["id"] == user_id), None)
+    user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
     
     # 更新用户信息
-    updated_user = user.copy()
     if data.name:
-        updated_user["name"] = data.name
+        user.name = data.name
     if data.email:
-        updated_user["email"] = data.email
-    updated_user["updatedAt"] = datetime.now().isoformat()
+        user.email = data.email
+    user.updatedAt = datetime.now().isoformat()
+    db.commit()
+    db.refresh(user)
     
-    return updated_user
+    return structure_user_data(user)
 
 
 @router.patch("/{user_id}/status", response_model=dict)
@@ -130,22 +147,23 @@ async def update_user_status(
     """
     # 在实际应用中，检查当前用户是否为管理员
     # 在模拟环境中，我们直接更新并返回用户状态
-    
-    user = next((u for u in MOCK_USERS_LIST if u["id"] == user_id), None)
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    # user = next((u for u in user_list if u.id == user_id), None)
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
     
     # 检查状态值是否有效
-    valid_statuses = ["active", "inactive", "banned"]
+    valid_statuses = ["inactive", "active","banned"]
     if data.status not in valid_statuses:
         raise HTTPException(status_code=400, detail=f"无效的状态值，有效值为: {', '.join(valid_statuses)}")
     
     # 更新用户状态
-    updated_user = user.copy()
-    updated_user["status"] = data.status
-    updated_user["updatedAt"] = datetime.now().isoformat()
-    
-    return updated_user
+    # print(data.status)
+    user.is_active = 1 if data.status == "active" else 0
+    user.updated_at = datetime.now()
+    db.commit()
+    db.refresh(user)
+    return structure_user_data(user)
 
 
 @router.patch("/{user_id}/role", response_model=dict)
@@ -160,22 +178,22 @@ async def update_user_role(
     """
     # 在实际应用中，检查当前用户是否为管理员
     # 在模拟环境中，我们直接更新并返回用户角色
-    
-    user = next((u for u in MOCK_USERS_LIST if u["id"] == user_id), None)
+    user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
     
     # 检查角色值是否有效
     valid_roles = ["user", "admin"]
-    if data.role not in valid_roles:
+    if user.role not in valid_roles:
         raise HTTPException(status_code=400, detail=f"无效的角色值，有效值为: {', '.join(valid_roles)}")
     
     # 更新用户角色
-    updated_user = user.copy()
-    updated_user["role"] = data.role
-    updated_user["updatedAt"] = datetime.now().isoformat()
+    user.role = "user" if data.role == "user" else "admin"
+    user.updated_at = datetime.now()
+    db.commit()
+    db.refresh(user)
     
-    return updated_user
+    return structure_user_data(user)
 
 
 @router.post("/{user_id}/change-password", response_model=dict)
@@ -193,7 +211,13 @@ async def change_password(
     
     if data.newPassword != data.confirmPassword:
         raise HTTPException(status_code=400, detail="新密码与确认密码不匹配")
-    
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    user.hashed_password = data.newPassword
+    user.updated_at = datetime.now()
+    db.commit()
+    db.refresh(user)
     return {
         "message": "密码修改成功",
         "success": True
@@ -214,14 +238,15 @@ async def search_users(
     
     if not q:
         return []
-    
+    user_list = db.query(models.User).all()
     # 搜索用户名或邮箱
     results = [
-        u for u in MOCK_USERS_LIST 
-        if q.lower() in u["name"].lower() or q.lower() in u["email"].lower()
+        u for u in user_list 
+        if q.lower() in u.name.lower() or q.lower() in u.email.lower()
     ]
     
     return results
+
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -234,11 +259,18 @@ async def delete_user(
     删除用户（管理员权限）
     """
     # 在实际应用中，检查当前用户是否为管理员
+    current_user = db.query(models.User).get(current_user_id)
+    if not current_user or current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="操作需要管理员权限"
+        )
     # 在模拟环境中，我们直接返回成功状态
-    
-    user = next((u for u in MOCK_USERS_LIST if u["id"] == user_id), None)
+    user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
-    
+    db.delete(user)
+    db.commit()
+    # db.refresh(user) 
     # 在实际应用中，这里会从数据库中删除或禁用用户
     return None 

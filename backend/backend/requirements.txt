@@ -1,0 +1,4 @@
+SQLAlchemy
+Alembic
+psycopg2-binary  # If using PostgreSQL, change this to the appropriate database driver if needed
+# Add any other dependencies your project may require here

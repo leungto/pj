@@ -20,6 +20,7 @@ from UserManagement import views
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/auth/register", views.auth_register),
-    path("api/show_user", views.show_user),
-    path("api/auth/login", views.auth_login)
+    path("show_users", views.show_user),
+    path("api/auth/login", views.auth_login),
+    path("api/users", views.get_users),
 ]

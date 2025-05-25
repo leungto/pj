@@ -9,4 +9,5 @@ def create_tables():
     """
     创建数据库中的所有表
     """
+    # Base.metadata.drop_all(bind=engine)  # 删除所有表
     Base.metadata.create_all(bind=engine)

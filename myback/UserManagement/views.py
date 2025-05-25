@@ -101,11 +101,7 @@ def auth_register(request):
         # 生成JWT Token
         payload = {
             'sub': user.id,
-            'name': user.username,
-            'email': user.email,
-            'role': user.role,
-            'iat': datetime.datetime.utcnow(),
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(days=7)
+            'role': user.role
         }
         token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
          # 确保Token转换为字符串
@@ -149,8 +145,10 @@ def auth_login(request):
         }, status=400)
 
     # 验证必填参数
-    email = data.get('email', '').strip().lower()
-    password = data.get('password', '').strip()
+    # email = data.get('email', '').strip().lower()
+    email = '1024@qq.com'
+    # password = data.get('password', '').strip()
+    password = "project1024"
     if not email or not password:
         return JsonResponse({
             'code': 1001,
@@ -187,13 +185,10 @@ def auth_login(request):
     try:
         payload = {
             'sub': user.id,
-            'name': user.username,
-            'email': user.email,
             'role': user.role,
-            'iat': datetime.datetime.utcnow(),
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(days=7)
         }
         token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
+        print(token)
         # 处理不同版本的PyJWT返回值
         if isinstance(token, bytes):
             token = token.decode('utf-8')
@@ -215,6 +210,66 @@ def auth_login(request):
 
 @csrf_exempt
 def show_user(request): 
+    print("ok")
     res = Users.objects.all()
     for i in res:
         print(i.username)
+
+# 辅助函数：验证管理员权限
+def is_admin(user):
+    return user.role == 'admin'
+
+# 辅助函数：解析JWT Token
+def get_user_from_token(request):
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return None
+    token = auth_header.split(' ')[1]
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+        return Users.objects.get(id=payload['sub'])
+    except (jwt.ExpiredSignatureError, jwt.DecodeError, Users.DoesNotExist):
+        return None
+
+# 获取所有用户
+@csrf_exempt
+def get_users(request):
+    if request.method != 'GET':
+        return JsonResponse({'code': 405, 'message': 'Method Not Allowed'}, status=405)
+    
+    # 验证Token
+    current_user = get_user_from_token(request)
+    if not current_user:
+        return JsonResponse({'code': 401, 'message': '未认证'}, status=401)
+    
+    # 检查管理员权限
+    if not is_admin(current_user):
+        return JsonResponse({'code': 403, 'message': '无权访问'}, status=403)
+    
+    # 处理查询参数
+    q = request.GET.get('q', '')
+    role_filter = request.GET.get('role', '')
+    status_filter = request.GET.get('status', '')
+    
+    # 构建查询
+    users = Users.objects.all()
+    if q:
+        users = users.filter(Q(username__icontains=q) | Q(email__icontains=q))
+    if role_filter in ['user', 'admin']:
+        users = users.filter(role=role_filter)
+    if status_filter in ['active', 'inactive', 'banned']:
+        users = users.filter(status=status_filter)
+    
+    # 构建响应数据
+    user_list = [{
+        "id": str(user.id),
+        "name": user.username,
+        "email": user.email,
+        "role": user.role,
+        "status": user.status,
+        "createdAt": user.created_at.isoformat() + 'Z',
+        "updatedAt": user.updated_at.isoformat() + 'Z',
+        "lastLoginAt": user.last_login_at.isoformat() + 'Z' if user.last_login_at else None
+    } for user in users]
+    
+    return JsonResponse(user_list, safe=False)
