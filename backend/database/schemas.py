@@ -3,7 +3,7 @@ Pydantic schemas for data validation.
 """
 from datetime import datetime, date
 from typing import List, Optional
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
 
 
 # ==================== 用户相关模型 ====================
@@ -36,7 +36,32 @@ class UserResponse(UserBase):
     
     model_config = ConfigDict(from_attributes=True)
 
+# class RegisterRequest(BaseModel):
+#     name: str
+#     email: EmailStr
+#     password: str
+#     confirmPassword: str
 
+#     @field_validator('name')
+#     def validate_name(cls, v):
+#         if len(v) < 2 or len(v) > 50:
+#             raise ValueError("用户名长度必须为2-50个字符")
+#         return v.title()  # 保持名称格式统一
+
+#     @field_validator('password')
+#     def validate_password(cls, v):
+#         error_msgs = []
+#         if len(v) < 8:
+#             error_msgs.append("长度至少为8个字符")
+#         if not any(c.isdigit() for c in v):
+#             error_msgs.append("必须包含至少一个数字")
+#         if not any(c.isalpha() for c in v):
+#             error_msgs.append("必须包含至少一个字母")
+        
+#         if error_msgs:
+#             raise ValueError("密码不符合要求：" + "，".join(error_msgs))
+#         return v
+    
 # ==================== 房间相关模型 ====================
 
 class RoomBase(BaseModel):

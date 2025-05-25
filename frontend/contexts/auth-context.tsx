@@ -96,10 +96,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       router.push("/dashboard")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login failed:", error)
+      // 显示具体的后端错误消息
+      const errorMessage = error?.message || "请检查您的邮箱和密码"
       toast.error("登录失败", {
-        description: error.message || "请检查您的邮箱和密码",
+        description: errorMessage,
       })
       throw error
     } finally {
@@ -116,10 +118,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
         description: "请使用您的新账号登录",
       })
       router.push("/login")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Registration failed:", error)
+      // 显示具体的后端错误消息
+      const errorMessage = error?.message || "请检查您的注册信息"
       toast.error("注册失败", {
-        description: error.message || "请检查您的注册信息",
+        description: errorMessage,
       })
       throw error
     } finally {

@@ -42,24 +42,51 @@ async def get_user_reservations(
     )
     print(reservations_current_user[0] if len(reservations_current_user) > 0 else None)
 
+    start_time = [
+        db.query(models.TimeSlot.start_time)
+        .filter(models.TimeSlot.id == reservation.time_slot_id)
+        .first()
+        for reservation in reservations_current_user
+    ]
+
+    end_time = [
+        db.query(models.TimeSlot.end_time)
+        .filter(models.TimeSlot.id == reservation.time_slot_id)
+        .first()
+        for reservation in reservations_current_user
+    ]
+
+    seats = [
+        db.query(models.Seat).filter(models.Seat.id == reservation.seat_id).first()
+        for reservation in reservations_current_user
+    ]
+
+    rooms = [
+        db.query(models.Room).filter(models.Room.id == seat.room_id).first()
+        for seat in seats
+    ]
+
     response_data = [
         {
             "id": reservation.id,
             "seatId": str(reservation.seat_id),
-            "seatNumber": f"{reservation.seat_id}",  # 模拟座位号
-            "location": "假位置",  # 模拟位置
+            "seatNumber": f"{seat.seat_number}",  # 模拟座位号
+            "location": f"{room.name}({room.location})",  # 模拟位置
             "userId": str(reservation.user_id),
             "date": reservation.date.strftime("%Y-%m-%d"),  # 转换为字符串
-            "timeSlot": (
-                f"{reservation.time_slot_id}:00-{int(reservation.time_slot_id)+1}:00"
-                if reservation.time_slot_id.isdigit()
-                else "09:00-10:00"
-            ),
+            # "timeSlot": (
+            #     f"{reservation.time_slot_id}:00-{int(reservation.time_slot_id)+1}:00"
+            #     if reservation.time_slot_id.isdigit()
+            #     else "09:00-10:00"
+            # ),
+            "timeSlot": f"{st[0]}-{et[0]}",
             "status": reservation.status,
             "createdAt": datetime.fromisoformat(reservation.created_at.isoformat()),
             "updatedAt": datetime.fromisoformat(reservation.updated_at.isoformat()),
         }
-        for reservation in reservations_current_user
+        for st, et, seat, room, reservation in zip(
+            start_time, end_time, seats, rooms, reservations_current_user
+        )
     ]
 
     return response_data
@@ -83,6 +110,31 @@ async def get_recent_reservations(
         .limit(limit)
         .all()
     )
+
+    start_time = [
+        db.query(models.TimeSlot.start_time)
+        .filter(models.TimeSlot.id == reservation.time_slot_id)
+        .first()
+        for reservation in sorted_reservations
+    ]
+
+    end_time = [
+        db.query(models.TimeSlot.end_time)
+        .filter(models.TimeSlot.id == reservation.time_slot_id)
+        .first()
+        for reservation in sorted_reservations
+    ]
+
+    seats = [
+        db.query(models.Seat).filter(models.Seat.id == reservation.seat_id).first()
+        for reservation in sorted_reservations
+    ]
+
+    rooms = [
+        db.query(models.Room).filter(models.Room.id == seat.room_id).first()
+        for seat in seats
+    ]
+
     # print(sorted_reservations)
     # reservation = sorted_reservations[0]
     # 转换为符合 ReservationResponse 的格式
@@ -90,20 +142,23 @@ async def get_recent_reservations(
         {
             "id": reservation.id,
             "seatId": str(reservation.seat_id),
-            "seatNumber": f"S{reservation.seat_id}",  # 模拟座位号
-            "location": "预约位置",  # 模拟位置
+            "seatNumber": f"{seat.seat_number}",  # 模拟座位号
+            "location": f"{room.name}({room.location})",  # 模拟位置
             "userId": str(reservation.user_id),
             "date": reservation.date.strftime("%Y-%m-%d"),  # 转换为字符串
-            "timeSlot": (
-                f"{reservation.time_slot_id}:00-{int(reservation.time_slot_id)+1}:00"
-                if reservation.time_slot_id.isdigit()
-                else "09:00-10:00"
-            ),
+            # "timeSlot": (
+            #     f"{reservation.time_slot_id}:00-{int(reservation.time_slot_id)+1}:00"
+            #     if reservation.time_slot_id.isdigit()
+            #     else "09:00-10:00"
+            # ),
+            "timeSlot": f"{st[0]}-{et[0]}",
             "status": reservation.status,
             "createdAt": datetime.fromisoformat(reservation.created_at.isoformat()),
             "updatedAt": datetime.fromisoformat(reservation.updated_at.isoformat()),
         }
-        for reservation in sorted_reservations
+        for st, et, seat, room, reservation in zip(
+            start_time, end_time, seats, rooms, sorted_reservations
+        )
     ]
     # print("❌")
     # print(response_data[0])
@@ -148,6 +203,20 @@ async def get_today_checkin_reservations(
         .all()
     )
 
+    start_time = [
+        db.query(models.TimeSlot.start_time)
+        .filter(models.TimeSlot.id == reservation.time_slot_id)
+        .first()
+        for reservation in today_reservations
+    ]
+
+    end_time = [
+        db.query(models.TimeSlot.end_time)
+        .filter(models.TimeSlot.id == reservation.time_slot_id)
+        .first()
+        for reservation in today_reservations
+    ]
+
     response_data = [
         {
             "id": reservation.id,
@@ -156,16 +225,17 @@ async def get_today_checkin_reservations(
             "location": "预约位置",  # 模拟位置
             "userId": str(reservation.user_id),
             "date": reservation.date.strftime("%Y-%m-%d"),  # 转换为字符串
-            "timeSlot": (
-                f"{reservation.time_slot_id}:00-{int(reservation.time_slot_id)+1}:00"
-                if reservation.time_slot_id.isdigit()
-                else "09:00-10:00"
-            ),
+            # "timeSlot": (
+            #     f"{reservation.time_slot_id}:00-{int(reservation.time_slot_id)+1}:00"
+            #     if reservation.time_slot_id.isdigit()
+            #     else "09:00-10:00"
+            # ),
+            "timeSlot": f"{st[0]}-{et[0]}",
             "status": reservation.status,
             "createdAt": datetime.fromisoformat(reservation.created_at.isoformat()),
             "updatedAt": datetime.fromisoformat(reservation.updated_at.isoformat()),
         }
-        for reservation in today_reservations
+        for st, et, reservation in zip(start_time, end_time, today_reservations)
     ]
 
     # return today_reservations
@@ -192,44 +262,57 @@ async def get_all_recent_reservations(
         .all()
     )
 
+    start_time = [
+        db.query(models.TimeSlot.start_time)
+        .filter(models.TimeSlot.id == reservation.time_slot_id)
+        .first()
+        for reservation in sorted_reservations
+    ]
+
+    end_time = [
+        db.query(models.TimeSlot.end_time)
+        .filter(models.TimeSlot.id == reservation.time_slot_id)
+        .first()
+        for reservation in sorted_reservations
+    ]
+
+    seats = [
+        db.query(models.Seat).filter(models.Seat.id == reservation.seat_id).first()
+        for reservation in sorted_reservations
+    ]
+
+    rooms = [
+        db.query(models.Room).filter(models.Room.id == seat.room_id).first()
+        for seat in seats
+    ]
+
     response_data = [
         {
             "id": reservation.id,
             "seatId": str(reservation.seat_id),
-            "seatNumber": f"S{reservation.seat_id}",  # 模拟座位号
-            "location": "预约位置",  # 模拟位置
+            "seatNumber": f"{seat.seat_number}",  # 模拟座位号
+            "location": f"{room.name}({room.location})",  # 模拟位置
             "userId": str(reservation.user_id),
             "date": reservation.date.strftime("%Y-%m-%d"),  # 转换为字符串
-            "timeSlot": (
-                f"{reservation.time_slot_id}:00-{int(reservation.time_slot_id)+1}:00"
-                if reservation.time_slot_id.isdigit()
-                else "09:00-10:00"
-            ),
+            # "timeSlot": (
+            #     f"{reservation.time_slot_id}:00-{int(reservation.time_slot_id)+1}:00"
+            #     if reservation.time_slot_id.isdigit()
+            #     else "09:00-10:00"
+            # ),
+            "timeSlot": f"{st[0]}-{et[0]}",
             "status": reservation.status,
             "createdAt": datetime.fromisoformat(reservation.created_at.isoformat()),
             "updatedAt": datetime.fromisoformat(reservation.updated_at.isoformat()),
         }
-        for reservation in sorted_reservations
+        for st, et, seat, room, reservation in zip(
+            start_time, end_time, seats, rooms, sorted_reservations
+        )
     ]
     # print("❌")
     # print(response_data[0])
 
     # return sorted_reservations[:limit]
     return response_data
-
-
-@router.get("/stats", response_model=List[ReservationStatItem])
-async def get_reservation_stats(
-    current_user_id: int = Depends(get_current_user_id), db: Session = Depends(get_db)
-):
-    """
-    获取预约统计数据
-    """
-    # 返回模拟数据
-    reservation_states = db.query(models.Reservation)
-
-    # return MOCK_RESERVATION_STATS
-    return reservation_states
 
 
 @router.get("/checkin-stats", response_model=List)
@@ -240,96 +323,103 @@ async def get_checkin_stats(
     获取签到统计数据
     """
     # 返回模拟数据
-    return MOCK_CHECKIN_STATS
+
+    # checkin_stats = (
+    #     db.query(
+    #         models.Room.name.label("location"),  # 获取房间名称作为 location
+    #         func.count(models.Reservation.id).label("total"),  # 统计每个位置的预约总数
+    #         func.sum(
+    #             func.case([(models.Reservation.status == "已签到", 1)], 0)  # 默认值为 0
+    #         ).label(
+    #             "checkedIn"
+    #         ),  # 统计每个位置的已签到数量
+    #     )
+    #     .join(
+    #         models.Seat, models.Reservation.seat_id == models.Seat.id
+    #     )  # 关联 seats 表
+    #     .join(models.Room, models.Seat.room_id == models.Room.id)  # 关联 rooms 表
+    #     .group_by(models.Room.name)  # 按房间名称分组
+    #     .all()
+    # )
+
+    # 第一步：查询所有预约记录
+    reservations = db.query(
+        models.Reservation.id, models.Reservation.seat_id, models.Reservation.status
+    ).all()
+
+    # 第二步：获取 seat_id 对应的 room_id
+    seat_to_room = {
+        seat.id: seat.room_id
+        for seat in db.query(models.Seat.id, models.Seat.room_id).all()
+    }
+
+    # 第三步：获取 room_id 对应的 location 信息
+    room_to_location = {
+        room.id: room.name for room in db.query(models.Room.id, models.Room.name).all()
+    }
+
+    # 初始化统计数据，确保所有 location 都有默认值
+    stats = {
+        location: {"total": 0, "checkedIn": 0} for location in room_to_location.values()
+    }
+
+    # 第四步：统计每个 location 的预约总数和已签到数量
+    for reservation in reservations:
+        seat_id = reservation.seat_id
+        room_id = seat_to_room.get(seat_id)
+        location = room_to_location.get(room_id)
+
+        if location not in stats:
+            stats[location] = {"total": 0, "checkedIn": 0}
+
+        stats[location]["total"] += 1
+        if reservation.status == "已签到":
+            stats[location]["checkedIn"] += 1
+
+    # 转换为列表格式
+    response_data = [
+        {"name": location, "total": data["total"], "checkedIn": data["checkedIn"]}
+        for location, data in stats.items()
+    ]
+    # response_data = [
+    #     {
+    #         "name": response.location,
+    #         "total": response.total,
+    #         "checkedIn": response.checkedIn,
+    #     }
+    #     for response in checkin_stats
+    # ]
+    return response_data
 
 
+@router.get("/stats", response_model=List[ReservationStatItem])
+async def get_reservation_stats(
+    current_user_id: int = Depends(get_current_user_id), db: Session = Depends(get_db)
+):
+    """
+    获取预约统计数据
+    """
+    # 查询数据库中的预约统计数据
+    # 查询数据库中的预约统计数据
+    reservation_stats = (
+        db.query(
+            models.Room.name.label("location"),  # 获取房间名称作为 location
+            func.count(models.Reservation.id).label("total"),  # 统计每个位置的预约总数
+        )
+        .join(
+            models.Seat, models.Reservation.seat_id == models.Seat.id
+        )  # 关联 seats 表
+        .join(models.Room, models.Seat.room_id == models.Room.id)  # 关联 rooms 表
+        .group_by(models.Room.name)  # 按房间名称分组
+        .all()
+    )
 
-# @router.get("/stats", response_model=List[ReservationStatItem])
-# async def get_reservation_stats(
-#     current_user_id: int = Depends(get_current_user_id), db: Session = Depends(get_db)
-# ):
-#     """
-#     获取预约统计数据
-#     """
-#     # 查询数据库中的预约状态统计数据
-#     reservation_states = (
-#         db.query(
-#             models.Reservation.status,  # 按预约状态分组
-#             func.count(models.Reservation.id).label("count"),  # 统计每种状态的数量
-#         )
-#         .group_by(models.Reservation.status)
-#         .all()
-#     )
+    response_data = [
+        {"name": response.location, "total": response.total}
+        for response in reservation_stats
+    ]
 
-#     # 将查询结果转换为 Pydantic 模型所需的格式
-#     stats = [
-#         ReservationStatItem(status=state.status, count=state.count)
-#         for state in reservation_states
-#     ]
-
-#     return stats
-
-
-# @router.get("/checkin-stats", response_model=List[ReservationStatItem])
-# async def get_checkin_stats(
-#     current_user_id: int = Depends(get_current_user_id), db: Session = Depends(get_db)
-# ):
-#     """
-#     获取签到统计数据
-#     """
-#     # 查询数据库中的签到统计数据
-#     checkin_stats = (
-#         db.query(
-#             models.Reservation.status,  # 按预约状态分组
-#             func.count(models.Reservation.id).label("count"),  # 统计每种状态的数量
-#         )
-#         .filter(models.Reservation.status == "已确认")  # 仅统计已签到的预约
-#         .group_by(models.Reservation.status)
-#         .all()
-#     )
-
-#     # 将查询结果转换为 Pydantic 模型所需的格式
-#     stats = [
-#         ReservationStatItem(status=state.status, count=state.count)
-#         for state in checkin_stats
-#     ]
-
-#     return stats
-
-
-# @router.post(
-#     "/", response_model=ReservationResponse, status_code=status.HTTP_201_CREATED
-# )
-# async def create_reservation(
-#     reservation: ReservationCreate,
-#     current_user_id: int = Depends(get_current_user_id),
-#     db: Session = Depends(get_db),
-# ):
-#     print("🌳 def create_reservation")
-#     """
-#     创建新预约
-#     """
-#     # 返回模拟新创建的预约
-#     new_reservation = {
-#         "id": "999",  # 假设这是新生成的ID
-#         "seatId": reservation.seatId,
-#         "seatNumber": f"S{reservation.seatId}",  # 模拟座位号
-#         "location": "新创建的预约位置",
-#         "userId": str(current_user_id),
-#         "date": str(reservation.date),
-#         "timeSlot": (
-#             f"{reservation.timeSlotId}:00-{int(reservation.timeSlotId)+1}:00"
-#             if reservation.timeSlotId.isdigit()
-#             else "09:00-10:00"
-#         ),
-#         "status": "已预约",
-#         "createdAt": datetime.now(),
-#         "updatedAt": datetime.now(),
-#     }
-#     print(new_reservation)
-#     # 需要将post 的预约新添加信息提交到数据库
-
-#     return new_reservation
+    return response_data
 
 
 @router.post(
@@ -348,6 +438,10 @@ async def create_reservation(
     print(reservation)
     for k, v in reservation:
         print(k, v)
+
+    # print(reservation)
+    # for k, v in reservation:
+    #     print(k, v)
     # 返回模拟新创建的预约
 
     # # 确保 date 是一个 Python 的 date 对象
@@ -369,17 +463,21 @@ async def create_reservation(
         user_id=str(current_user_id),
         seat_id=reservation.seatId,
         date=reservation_date,  # 使用转换后的 date 对象
-        time_slot_id=(
-            f"{reservation.timeSlotId}:00-{int(reservation.timeSlotId)+1}:00"
-            if reservation.timeSlotId.isdigit()
-            else "09:00-10:00"
-        ),
+        # time_slot_id=(
+        #     f"{reservation.timeSlotId}:00-{int(reservation.timeSlotId)+1}:00"
+        #     if reservation.timeSlotId.isdigit()
+        #     else "09:00-10:00"
+        # ),
+        time_slot_id=reservation.timeSlotId,
         status="已预约",
         created_at=datetime.now(),
         updated_at=datetime.now(),
     )
 
-    print(new_reservation)
+    # seat = db.query(models.Seat).filter(models.Seat.id == reservation.seatId).first()
+    # seat.is_available = 2
+    # db.commit()
+    # db.refresh(seat)
 
     # 保存到数据库
     db.add(new_reservation)
@@ -388,18 +486,37 @@ async def create_reservation(
 
     # 需要将post 的预约新添加信息提交到数据库
 
+    st = (
+        db.query(models.TimeSlot.start_time)
+        .filter(models.TimeSlot.id == new_reservation.time_slot_id)
+        .first()
+    )
+
+    et = (
+        db.query(models.TimeSlot.end_time)
+        .filter(models.TimeSlot.id == new_reservation.time_slot_id)
+        .first()
+    )
+
+    seat = (
+        db.query(models.Seat).filter(models.Seat.id == new_reservation.seat_id).first()
+    )
+
+    room = db.query(models.Room).filter(models.Room.id == seat.room_id).first()
+
     reservation_date = {
         "id": new_reservation.id,
         "seatId": str(new_reservation.seat_id),
-        "seatNumber": f"{new_reservation.seat_id}",  # 模拟座位号
-        "location": "新创建的预约位置(字段缺少)",
+        "seatNumber": f"{seat.seat_number}",  # 模拟座位号
+        "location": f"{room.name}({room.location})",  # 模拟位置
         "userId": str(current_user_id),
         "date": new_reservation.date.strftime("%Y-%m-%d"),  # 转换为字符串
-        "timeSlot": (
-            f"{new_reservation.time_slot_id}:00-{int(new_reservation.time_slot_id)+1}:00"
-            if new_reservation.time_slot_id.isdigit()
-            else "09:00-10:00"
-        ),
+        # "timeSlot": (
+        #     f"{new_reservation.time_slot_id}:00-{int(new_reservation.time_slot_id)+1}:00"
+        #     if new_reservation.time_slot_id.isdigit()
+        #     else "09:00-10:00"
+        # ),
+        "timeSlot": f"{st[0]}-{et[0]}",
         "status": new_reservation.status,
         "createdAt": datetime.fromisoformat(new_reservation.created_at.isoformat()),
         "updatedAt": datetime.fromisoformat(new_reservation.updated_at.isoformat()),
@@ -425,36 +542,6 @@ async def create_reservation(
 
     print(reservation_date)
     return reservation_date
-
-
-# @router.delete("/{reservation_id}", response_model=ReservationResponse)
-# async def cancel_reservation(
-#     reservation_id: str,
-#     current_user_id: int = Depends(get_current_user_id),
-#     db: Session = Depends(get_db),
-# ):
-#     """
-#     取消预约
-#     """
-#     # 查找对应的预约
-#     reservation = next(
-#         (r for r in MOCK_RESERVATIONS if r["id"] == reservation_id), None
-#     )
-
-#     if not reservation:
-#         raise HTTPException(status_code=404, detail="预约不存在")
-
-#     # 验证预约是否属于当前用户
-#     if reservation["userId"] != str(current_user_id):
-#         raise HTTPException(status_code=403, detail="无权操作此预约")
-
-#     # 返回已取消的预约
-#     cancelled_reservation = {
-#         **reservation,
-#         "status": "已取消",
-#         "updatedAt": datetime.now(),
-#     }
-#     return cancelled_reservation
 
 
 @router.delete("/{reservation_id}", response_model=ReservationResponse)
@@ -490,6 +577,18 @@ async def cancel_reservation(
     db.delete(reservation)
     db.commit()
 
+    st = (
+        db.query(models.TimeSlot.start_time)
+        .filter(models.TimeSlot.id == reservation.time_slot_id)
+        .first()
+    )
+
+    et = (
+        db.query(models.TimeSlot.end_time)
+        .filter(models.TimeSlot.id == reservation.time_slot_id)
+        .first()
+    )
+
     # 返回已取消的预约信息
     cancelled_reservation = {
         "id": reservation.id,
@@ -498,11 +597,12 @@ async def cancel_reservation(
         "location": "预约位置",  # 模拟位置
         "userId": str(reservation.user_id),
         "date": reservation.date.strftime("%Y-%m-%d"),  # 转换为字符串
-        "timeSlot": (
-            f"{reservation.time_slot_id}:00-{int(reservation.time_slot_id)+1}:00"
-            if reservation.time_slot_id.isdigit()
-            else "09:00-10:00"
-        ),
+        # "timeSlot": (
+        #     f"{reservation.time_slot_id}:00-{int(reservation.time_slot_id)+1}:00"
+        #     if reservation.time_slot_id.isdigit()
+        #     else "09:00-10:00"
+        # ),
+        "timeSlot": f"{st[0]}-{et[0]}",
         "status": "已取消",
         "createdAt": reservation.created_at.isoformat(),
         "updatedAt": datetime.now().isoformat(),
@@ -614,20 +714,37 @@ async def checkin_reservation(
     db.commit()
     db.refresh(reservation)
 
+    st = (
+        db.query(models.TimeSlot.start_time)
+        .filter(models.TimeSlot.id == reservation.time_slot_id)
+        .first()
+    )
+
+    et = (
+        db.query(models.TimeSlot.end_time)
+        .filter(models.TimeSlot.id == reservation.time_slot_id)
+        .first()
+    )
+
+    seat = db.query(models.Seat).filter(models.Seat.id == reservation.seat_id).first()
+
+    room = db.query(models.Room).filter(models.Room.id == seat.room_id).first()
+
     # 返回已签到的预约信息
     checked_in_reservation = {
         # **reservation,
         "id": reservation.id,
         "seatId": str(reservation.seat_id),
-        "seatNumber": f"{reservation.seat_id}",  # 模拟座位号
-        "location": "预约位置",  # 模拟位置
+        "seatNumber": f"{seat.seat_number}",  # 模拟座位号
+        "location": f"{room.name}({room.location})",  # 模拟位置
         "userId": str(reservation.user_id),
         "date": reservation.date.strftime("%Y-%m-%d"),  # 转换为字符串
-        "timeSlot": (
-            f"{reservation.time_slot_id}:00-{int(reservation.time_slot_id)+1}:00"
-            if reservation.time_slot_id.isdigit()
-            else "09:00-10:00"
-        ),
+        # "timeSlot": (
+        #     f"{reservation.time_slot_id}:00-{int(reservation.time_slot_id)+1}:00"
+        #     if reservation.time_slot_id.isdigit()
+        #     else "09:00-10:00"
+        # ),
+        "timeSlot": f"{st[0]}-{et[0]}",
         "status": reservation.status,
         "checkinTime": datetime.now().isoformat(),
         "createdAt": reservation.created_at.isoformat(),

@@ -8,6 +8,7 @@ from routes.bookings import router as bookings_router
 from routes.reservations import router as reservations_router
 from routes.time_slots import router as time_slots_router
 from routes.users import router as users_router
+from routes.admin import router as admin_router
 
 # 导入数据库模块
 from database import create_tables
@@ -47,6 +48,7 @@ app.include_router(bookings_router, prefix="/api/bookings", tags=["bookings"])
 app.include_router(reservations_router, prefix="/api/reservations", tags=["reservations"])
 app.include_router(time_slots_router, prefix="/api/time-slots", tags=["time-slots"])
 app.include_router(users_router, prefix="/api/users", tags=["users"])
+app.include_router(admin_router, prefix="/api/admin", tags=["admin"])
 
 # 添加一个特定的路由用于位置数据
 # 这里我们复用rooms模块中的get_all_locations函数

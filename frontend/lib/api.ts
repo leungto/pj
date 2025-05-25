@@ -71,7 +71,9 @@ export async function apiRequest<T = any>(endpoint: string, options: RequestOpti
 
     // 处理错误响应
     if (!response.ok) {
-      throw new ApiError(data.message || `API请求失败: ${response.status}`, response.status, data)
+      // 处理后端错误格式：{ detail: { message: "错误信息" } } 或 { message: "错误信息" }
+      const errorMessage = data.detail?.message || data.message || `API请求失败: ${response.status}`
+      throw new ApiError(errorMessage, response.status, data)
     }
 
     return data as T

@@ -45,17 +45,21 @@ export function NewReservationForm() {
     resolver: zodResolver(formSchema),
   })
 
-  // 监听日期变化，加载可用座位
+  // 监听日期和时间段变化，加载可用座位
   const selectedDate = form.watch("date")
+  const selectedTimeSlotId = form.watch("timeSlotId")
+
   useEffect(() => {
-    if (!selectedDate) return
+    if (!selectedDate) {
+      setAvailableSeats([])
+      return
+    }
 
     const fetchAvailableSeats = async () => {
       setIsLoadingSeats(true)
       try {
         const formattedDate = format(selectedDate, "yyyy-MM-dd")
-        const timeSlotId = form.getValues("timeSlotId")
-        const data = await seat.getAvailableSeats(formattedDate, timeSlotId)
+        const data = await seat.getAvailableSeats(formattedDate, selectedTimeSlotId)
         setAvailableSeats(
           data.map((seat) => ({
             id: seat.id,
@@ -74,18 +78,22 @@ export function NewReservationForm() {
     }
 
     fetchAvailableSeats()
-  }, [selectedDate, form])
+  }, [selectedDate, selectedTimeSlotId])
 
-  // 监听日期变化，加载可用时间段
+  // 监听日期和座位变化，加载可用时间段
+  const selectedSeatId = form.watch("seatId")
+
   useEffect(() => {
-    if (!selectedDate) return
+    if (!selectedDate) {
+      setTimeSlots([])
+      return
+    }
 
     const fetchTimeSlots = async () => {
       setIsLoadingTimeSlots(true)
       try {
         const formattedDate = format(selectedDate, "yyyy-MM-dd")
-        const seatId = form.getValues("seatId")
-        const data = await timeSlot.getAvailableTimeSlots(formattedDate, seatId)
+        const data = await timeSlot.getAvailableTimeSlots(formattedDate, selectedSeatId)
         setTimeSlots(data)
       } catch (error) {
         console.error("Failed to fetch time slots:", error)
@@ -98,7 +106,7 @@ export function NewReservationForm() {
     }
 
     fetchTimeSlots()
-  }, [selectedDate, form])
+  }, [selectedDate, selectedSeatId])
 
   // 提交表单
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -116,7 +124,7 @@ export function NewReservationForm() {
     } catch (error) {
       console.error("Failed to create reservation:", error)
       toast.error("预约失败", {
-        description: error.message || "无法创建预约，请稍后再试",
+        description: error instanceof Error ? error.message : "无法创建预约，请稍后再试",
       })
     } finally {
       setIsLoading(false)

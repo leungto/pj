@@ -52,7 +52,7 @@ class Seat(Base):
     id = Column(Integer, primary_key=True, index=True,autoincrement=True)
     room_id = Column(Integer, ForeignKey("rooms.id"))
     seat_number = Column(String, index=True)
-    is_available = Column(Integer, default=1) # 1表示可用，0表示维护中,2表示被预约
+    is_available = Column(Integer, default=1) # 1表示可用，0表示维护中
     features = Column(String)  # 例如："靠窗"
     description = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
