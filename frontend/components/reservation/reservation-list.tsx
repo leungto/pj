@@ -19,7 +19,9 @@ import {
 // 更新导入路径
 import { reservationService as reservation, type Reservation } from "@/services/reservation"
 import { Loader2, CheckSquare } from "lucide-react"
-import { format, isToday, parseISO } from "date-fns"
+// import { format, isToday, parseISO } from "date-fns"
+import { format } from "date-fns"
+import { isDateToday } from "@/lib/date-utils"
 
 export function ReservationList() {
   const [reservations, setReservations] = useState<Reservation[]>([])
@@ -80,7 +82,8 @@ export function ReservationList() {
 
   // 检查预约是否可以签到（今天的预约且未签到）
   const canCheckin = (reservation: Reservation) => {
-    return reservation.status === "已预约" && isToday(parseISO(reservation.date))
+    // return reservation.status === "已预约" && isToday(parseISO(reservation.date))
+    return reservation.status === "已预约" && isDateToday(reservation.date)
   }
 
   // 加载中状态
