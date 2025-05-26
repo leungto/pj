@@ -13,7 +13,8 @@ import { useForm } from "react-hook-form"
 import * as z from "zod"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-import { format } from "date-fns"
+// import { format } from "date-fns"
+import { formatDateToString } from "@/lib/date-utils"
 import { CalendarIcon, Loader2 } from "lucide-react"
 import { seatService as seat } from "@/services/seat"
 import { timeSlotService as timeSlot, type TimeSlot } from "@/services/time-slot"
@@ -58,7 +59,8 @@ export function NewReservationForm() {
     const fetchAvailableSeats = async () => {
       setIsLoadingSeats(true)
       try {
-        const formattedDate = format(selectedDate, "yyyy-MM-dd")
+        // const formattedDate = format(selectedDate, "yyyy-MM-dd")
+        const formattedDate = formatDateToString(selectedDate)
         const data = await seat.getAvailableSeats(formattedDate, selectedTimeSlotId)
         setAvailableSeats(
           data.map((seat) => ({
@@ -92,7 +94,8 @@ export function NewReservationForm() {
     const fetchTimeSlots = async () => {
       setIsLoadingTimeSlots(true)
       try {
-        const formattedDate = format(selectedDate, "yyyy-MM-dd")
+        // const formattedDate = format(selectedDate, "yyyy-MM-dd")
+        const formattedDate = formatDateToString(selectedDate)
         const data = await timeSlot.getAvailableTimeSlots(formattedDate, selectedSeatId)
         setTimeSlots(data)
       } catch (error) {
@@ -153,7 +156,8 @@ export function NewReservationForm() {
                           variant={"outline"}
                           className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
                         >
-                          {field.value ? format(field.value, "yyyy-MM-dd") : <span>选择日期</span>}
+                          {/* {field.value ? format(field.value, "yyyy-MM-dd") : <span>选择日期</span>} */}
+                          {field.value ? formatDateToString(field.value) : <span>选择日期</span>}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
                       </FormControl>
@@ -163,7 +167,13 @@ export function NewReservationForm() {
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
-                        disabled={(date) => date < new Date()}
+                        // disabled={(date) => date < new Date()}
+                        disabled={(date) => {
+                          // 获取今天的开始时间（00:00:00）
+                          const today = new Date()
+                          today.setHours(0, 0, 0, 0)
+                          return date < today
+                        }}
                         initialFocus
                       />
                     </PopoverContent>

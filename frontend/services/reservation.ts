@@ -1,4 +1,5 @@
 import { api } from "@/lib/api"
+import { formatDateToString } from "@/lib/date-utils"
 
 // 预约状态
 export type ReservationStatus = "已预约" | "已签到" | "已取消"
@@ -41,9 +42,11 @@ export const reservationService = {
    */
   createReservation: (data: CreateReservationRequest) => {
     // 如果日期是Date对象，转换为ISO字符串
+    // 如果日期是Date对象，转换为本地日期字符串（YYYY-MM-DD格式）
     const formattedData = {
       ...data,
-      date: data.date instanceof Date ? data.date.toISOString().split("T")[0] : data.date,
+      // date: data.date instanceof Date ? data.date.toISOString().split("T")[0] : data.date,
+      date: data.date instanceof Date ? formatDateToString(data.date) : data.date,
     }
     return api.post<Reservation>("/reservations", formattedData)
   },

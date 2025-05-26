@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "sonner"
 import { reservationService, type Reservation } from "@/services/reservation"
+import { isDateToday } from "@/lib/date-utils"
 import { Loader2, CheckCircle } from "lucide-react"
 import { format } from "date-fns"
 
